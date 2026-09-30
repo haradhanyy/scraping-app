@@ -1,0 +1,8 @@
+{
+  "name": "scraping-app",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ]
+}
