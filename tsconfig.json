@@ -6,6 +6,16 @@
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true
-  }
+    "forceConsistentCasingInFileNames": true,
+    "allowSyntheticDefaultImports": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "baseUrl": ".",
+    "paths": {
+      "@scraping-app/shared": ["./packages/shared/src"],
+      "@scraping-app/db": ["./packages/db/src"]
+    }
+  },
+  "exclude": ["node_modules", "**/dist", "**/.temporal"]
 }

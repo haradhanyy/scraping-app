@@ -1,0 +1,25 @@
+{
+  "name": "worker",
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "bun run src/worker.ts",
+    "start": "bun run src/worker.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@scraping-app/db": "workspace:*",
+    "@scraping-app/shared": "workspace:*",
+    "@temporalio/activity": "^1.11.6",
+    "@temporalio/client": "^1.11.6",
+    "@temporalio/worker": "^1.11.6",
+    "@temporalio/workflow": "^1.11.6",
+    "cheerio": "^1.0.0",
+    "playwright": "^1.49.1",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5.6.3"
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "name": "api",
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "bun run --hot src/index.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "bun dist/index.js",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@hono/zod-validator": "^0.4.3",
+    "@scraping-app/db": "workspace:*",
+    "@scraping-app/shared": "workspace:*",
+    "@temporalio/client": "^1.11.6",
+    "hono": "^4.6.5",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5.6.3"
+  }
+}

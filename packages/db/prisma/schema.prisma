@@ -1,0 +1,155 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Platform {
+  instagram
+  threads
+}
+
+enum JobStatus {
+  QUEUED
+  RUNNING
+  COMPLETED
+  FAILED
+  RATE_LIMITED
+}
+
+enum PostType {
+  POST
+  REEL
+  THREAD
+}
+
+enum Sentiment {
+  POSITIVE
+  NEGATIVE
+  NEUTRAL
+}
+
+model TrackedTarget {
+  id              String   @id @default(cuid())
+  platform        Platform
+  handle          String   // @username without @
+  displayName     String?
+  avatarUrl       String?
+  profileUrl      String
+  isActive        Boolean  @default(true)
+  scrapeFrequency String?  // e.g., "4 times daily"
+  lastScrapedAt   DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  metrics         MetricSnapshot[]
+  posts           Post[]
+  comments        Comment[]
+  jobs            ScrapeJob[]
+
+  @@unique([platform, handle])
+  @@index([isActive])
+  @@index([platform, isActive])
+}
+
+model MetricSnapshot {
+  id            String   @id @default(cuid())
+  targetId      String
+  target        TrackedTarget @relation(fields: [targetId], references: [id], onDelete: Cascade)
+  followers     BigInt   @default(0)
+  mentionVolume Int      @default(0)
+  growthPct     Float?
+  recordedAt    DateTime @default(now())
+
+  @@index([targetId, recordedAt(sort: Desc)])
+  @@index([recordedAt(sort: Desc)])
+}
+
+model Post {
+  id            String   @id @default(cuid())
+  targetId      String
+  target        TrackedTarget @relation(fields: [targetId], references: [id], onDelete: Cascade)
+  platform      Platform
+  postUrl       String   @unique
+  type          PostType
+  caption       String?  @db.Text
+  likes         BigInt   @default(0)
+  commentsCount Int      @default(0)
+  views         BigInt?
+  mediaUrls     String[]
+  hashtags      String[]
+  mentions      String[]
+  postedAt      DateTime
+  scrapedAt     DateTime @default(now())
+
+  comments      Comment[]
+
+  @@index([targetId, postedAt(sort: Desc)])
+  @@index([platform, postedAt(sort: Desc)])
+  @@index([type])
+  @@index([hashtags])
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  targetId  String
+  target    TrackedTarget @relation(fields: [targetId], references: [id], onDelete: Cascade)
+  author    String
+  text      String   @db.Text
+  sentiment Sentiment?
+  keywords  String[]
+  postedAt  DateTime
+  scrapedAt DateTime @default(now())
+
+  @@index([postId])
+  @@index([targetId, postedAt(sort: Desc)])
+  @@index([sentiment])
+}
+
+model ScrapeJob {
+  id                 String    @id @default(cuid())
+  targetId           String
+  target             TrackedTarget @relation(fields: [targetId], references: [id], onDelete: Cascade)
+  platform           Platform
+  targetUrl          String?
+  status             JobStatus @default(QUEUED)
+  attemptCount       Int       @default(0)
+  maxPosts           Int       @default(10)
+  maxComments        Int       @default(0)
+  error              String?   @db.Text
+  temporalWorkflowId String?   @unique
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  completedAt        DateTime?
+
+  posts              ScrapedPost[]
+
+  @@index([targetId, status])
+  @@index([status, createdAt(sort: Desc)])
+  @@index([platform, status])
+}
+
+model ScrapedPost {
+  id            String    @id @default(cuid())
+  jobId         String
+  job           ScrapeJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  platform      Platform
+  author        String
+  authorAvatar  String?
+  caption       String?   @db.Text
+  likes         Int       @default(0)
+  commentsCount Int       @default(0)
+  views         Int?
+  mediaUrls     String[]
+  postUrl       String?
+  postedAt      DateTime?
+  scrapedAt     DateTime  @default(now())
+
+  @@index([jobId])
+  @@index([postUrl])
+}

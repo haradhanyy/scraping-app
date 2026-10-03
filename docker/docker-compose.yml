@@ -1,0 +1,49 @@
+name: scraping-app
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: scraping-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: scraper
+      POSTGRES_PASSWORD: scraper_dev
+      POSTGRES_DB: scraper
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U scraper -d scraper"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  temporal:
+    image: temporalio/auto-setup:1.25
+    container_name: scraping-temporal
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      - DB=postgres12
+      - DB_PORT=5432
+      - POSTGRES_USER=scraper
+      - POSTGRES_PWD=scraper_dev
+      - POSTGRES_SEEDS=postgres
+    ports:
+      - "7233:7233"
+
+  temporal-ui:
+    image: temporalio/ui:2.54.1
+    container_name: scraping-temporal-ui
+    restart: unless-stopped
+    depends_on:
+      - temporal
+    environment:
+      - TEMPORAL_ADDRESS=temporal:7233
+    ports:
+      - "8233:8080"
+
+volumes:
+  pgdata:
