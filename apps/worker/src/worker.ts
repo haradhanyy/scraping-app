@@ -1,5 +1,6 @@
 import { NativeConnection, Worker } from "@temporalio/worker";
 import * as activities from "./activities.js";
+import * as eventActivities from "./activities/event-activities.js";
 
 async function main() {
   const address = process.env.TEMPORAL_ADDRESS ?? "localhost:7233";
@@ -14,8 +15,11 @@ async function main() {
     namespace,
     taskQueue,
     workflowsPath: new URL("./workflows.ts", import.meta.url).pathname,
-    activities,
-    maxConcurrentActivityTaskExecutions: 4, // bound concurrent Chromium pages
+    activities: {
+      ...activities,
+      ...eventActivities,
+    },
+    maxConcurrentActivityTaskExecutions: 4,
   });
 
   console.log("[worker] running — press Ctrl+C to stop");

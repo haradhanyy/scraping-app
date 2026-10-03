@@ -32,6 +32,86 @@ enum Sentiment {
   NEUTRAL
 }
 
+enum ScrapeEventType {
+  SCRAPE_INSTAGRAM_POST
+  SCRAPE_INSTAGRAM_REEL
+  SCRAPE_INSTAGRAM_PROFILE
+  SCRAPE_THREADS_POST
+  SCRAPE_THREADS_THREAD
+}
+
+enum ScrapeEventStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+  RATE_LIMITED
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  apiKeys       ApiKey[]
+  trackedTargets TrackedTarget[]
+  webhooks      Webhook[]
+  scrapeEvents  ScrapeEvent[]
+}
+
+model ApiKey {
+  id          String   @id @default(cuid())
+  keyHash     String   @unique
+  prefix      String   // e.g., "apk_abc123"
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String?  // optional label for the key
+  expiresAt   DateTime?
+  lastUsedAt  DateTime?
+  createdAt   DateTime @default(now())
+  isActive    Boolean  @default(true)
+
+  @@index([userId])
+  @@index([prefix])
+}
+
+model Webhook {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  url         String
+  secret      String?  // for HMAC signature verification
+  events      String[] // which events to fire for: ["scrape.completed", "scrape.failed", ...]
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model ProxyConfig {
+  id          String   @id @default(cuid())
+  host        String
+  port        Int
+  username    String?
+  password    String?
+  protocol    String   // "http" | "socks5"
+  ipWhitelist String[] // IPs allowed to use this proxy
+  country     String?  // for mobile/geo proxies
+  isMobile    Boolean  @default(false)
+  isActive    Boolean  @default(true)
+  lastChecked DateTime?
+  latencyMs   Int?
+  successRate Float?   // 0-1
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([isActive])
+  @@index([protocol, isActive])
+}
+
 model TrackedTarget {
   id              String   @id @default(cuid())
   platform        Platform
@@ -44,15 +124,19 @@ model TrackedTarget {
   lastScrapedAt   DateTime?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+  userId          String?
+  user            User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   metrics         MetricSnapshot[]
   posts           Post[]
   comments        Comment[]
   jobs            ScrapeJob[]
+  scrapeEvents    ScrapeEvent[]
 
   @@unique([platform, handle])
   @@index([isActive])
   @@index([platform, isActive])
+  @@index([userId])
 }
 
 model MetricSnapshot {
@@ -91,6 +175,7 @@ model Post {
   @@index([platform, postedAt(sort: Desc)])
   @@index([type])
   @@index([hashtags])
+  @@index([postUrl])
 }
 
 model Comment {
@@ -152,4 +237,27 @@ model ScrapedPost {
 
   @@index([jobId])
   @@index([postUrl])
+}
+
+model ScrapeEvent {
+  id          String           @id @default(cuid())
+  eventId     String           @unique // "evt_<uuid>"
+  type        ScrapeEventType
+  userId      String
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  targetId    String?
+  target      TrackedTarget?   @relation(fields: [targetId], references: [id], onDelete: SetNull)
+  payload     Json             // full scrape payload
+  status      ScrapeEventStatus @default(PENDING)
+  result      Json?            // scraped data
+  error       String?
+  webhookUrl  String?
+  webhookSecret String?
+  createdAt   DateTime         @default(now())
+  startedAt   DateTime?
+  completedAt DateTime?
+
+  @@index([userId, status])
+  @@index([eventId])
+  @@index([type, status])
 }

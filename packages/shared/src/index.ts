@@ -271,3 +271,152 @@ export function extractMentions(text: string): string[] {
 
 export const TEMPORAL_TASK_QUEUE = "scraping-queue";
 export const SCRAPE_WORKFLOW_NAME = "scrapeWorkflow";
+export const SCRAPE_EVENT_WORKFLOW_NAME = "scrapeEventWorkflow";
+
+// ---------- Scrape Event DTOs (for POST /scrape/instagram|threads) ----------
+
+export const ScrapeEventTypeSchema = z.enum([
+  "SCRAPE_INSTAGRAM_POST",
+  "SCRAPE_INSTAGRAM_REEL",
+  "SCRAPE_INSTAGRAM_PROFILE",
+  "SCRAPE_THREADS_POST",
+  "SCRAPE_THREADS_THREAD",
+]);
+export type ScrapeEventType = z.infer<typeof ScrapeEventTypeSchema>;
+
+export const ScrapeEventStatusSchema = z.enum([
+  "PENDING",
+  "RUNNING",
+  "COMPLETED",
+  "FAILED",
+  "RATE_LIMITED",
+]);
+export type ScrapeEventStatus = z.infer<typeof ScrapeEventStatusSchema>;
+
+// Instagram/Threads URL validation
+const INSTAGRAM_POST_RE = /^https?:\/\/(www\.)?instagram\.com\/(p|reel|reels)\/[A-Za-z0-9_-]+\/?/;
+const INSTAGRAM_PROFILE_RE = /^https?:\/\/(www\.)?instagram\.com\/[A-Za-z0-9._]+\/?$/;
+const THREADS_POST_RE = /^https?:\/\/(www\.)?threads\.net\/@[A-Za-z0-9._]+\/post\/[A-Za-z0-9_-]+\/?/;
+const THREADS_PROFILE_RE = /^https?:\/\/(www\.)?threads\.net\/@[A-Za-z0-9._]+\/?$/;
+
+export const ScrapeInstagramInputSchema = z.object({
+  type: z.enum(["POST", "REEL", "PROFILE"]),
+  url: z.string().url().refine(
+    (v) => INSTAGRAM_POST_RE.test(v) || INSTAGRAM_PROFILE_RE.test(v),
+    "Must be a valid Instagram post/reel/profile URL",
+  ),
+  scrapeLikes: z.boolean().default(true),
+  scrapeCommentNumber: z.boolean().default(true),
+  scrapeViews: z.boolean().default(false),
+  scrapeComments: z.boolean().default(false),
+  maxComments: z.coerce.number().int().min(0).max(200).default(0),
+});
+export type ScrapeInstagramInput = z.infer<typeof ScrapeInstagramInputSchema>;
+
+export const ScrapeThreadsInputSchema = z.object({
+  type: z.enum(["POST", "THREAD"]),
+  url: z.string().url().refine(
+    (v) => THREADS_POST_RE.test(v) || THREADS_PROFILE_RE.test(v),
+    "Must be a valid Threads post/profile URL",
+  ),
+  scrapeLikes: z.boolean().default(true),
+  scrapeCommentNumber: z.boolean().default(true),
+  scrapeViews: z.boolean().default(false),
+  scrapeComments: z.boolean().default(false),
+  maxComments: z.coerce.number().int().min(0).max(200).default(0),
+});
+export type ScrapeThreadsInput = z.infer<typeof ScrapeThreadsInputSchema>;
+
+export const ScrapeEventResponseSchema = z.object({
+  success: z.boolean(),
+  eventId: z.string(),
+  status: ScrapeEventStatusSchema,
+});
+export type ScrapeEventResponse = z.infer<typeof ScrapeEventResponseSchema>;
+
+export const ScrapeEventPayloadSchema = z.object({
+  eventId: z.string(),
+  type: ScrapeEventTypeSchema,
+  byUserId: z.string(),
+  payload: z.record(z.unknown()),
+  createdAt: z.string(),
+});
+export type ScrapeEventPayload = z.infer<typeof ScrapeEventPayloadSchema>;
+
+// ---------- API Key & Auth ----------
+
+export const ApiKeyPrefixSchema = z.string().startsWith("apk_");
+export type ApiKeyPrefix = z.infer<typeof ApiKeyPrefixSchema>;
+
+export const AuthHeaderSchema = z.object({
+  authorization: z.string().startsWith("apk_"),
+});
+export type AuthHeader = z.infer<typeof AuthHeaderSchema>;
+
+// ---------- Webhook ----------
+
+export const WebhookPayloadSchema = z.object({
+  eventId: z.string(),
+  type: ScrapeEventTypeSchema,
+  status: ScrapeEventStatusSchema,
+  result: z.record(z.unknown()).nullable().optional(),
+  error: z.string().nullable().optional(),
+  completedAt: z.string(),
+});
+export type WebhookPayload = z.infer<typeof WebhookPayloadSchema>;
+
+// ---------- Proxy ----------
+
+export const ProxyConfigSchema = z.object({
+  id: z.string(),
+  host: z.string(),
+  port: z.number().int(),
+  username: z.string().nullable().optional(),
+  password: z.string().nullable().optional(),
+  protocol: z.enum(["http", "socks5"]),
+  ipWhitelist: z.array(z.string()).default([]),
+  country: z.string().nullable().optional(),
+  isMobile: z.boolean().default(false),
+  isActive: z.boolean().default(true),
+  lastChecked: z.string().nullable().optional(),
+  latencyMs: z.number().int().nullable().optional(),
+  successRate: z.number().nullable().optional(),
+});
+export type ProxyConfig = z.infer<typeof ProxyConfigSchema>;
+
+// ---------- Utility ----------
+
+/** Generate event ID: evt_<uuid> */
+export function generateEventId(): string {
+  return `evt_${crypto.randomUUID()}`;
+}
+
+/** Map scrape input type to ScrapeEventType */
+export function mapInputTypeToEventType(
+  platform: "instagram" | "threads",
+  type: "POST" | "REEL" | "PROFILE" | "THREAD"
+): ScrapeEventType {
+  if (platform === "instagram") {
+    switch (type) {
+      case "POST": return "SCRAPE_INSTAGRAM_POST";
+      case "REEL": return "SCRAPE_INSTAGRAM_REEL";
+      case "PROFILE": return "SCRAPE_INSTAGRAM_PROFILE";
+      case "THREAD": return "SCRAPE_INSTAGRAM_POST"; // fallback
+    }
+  }
+  switch (type) {
+    case "POST": return "SCRAPE_THREADS_POST";
+    case "THREAD": return "SCRAPE_THREADS_THREAD";
+    case "REEL":
+    case "PROFILE":
+      return "SCRAPE_THREADS_POST"; // fallback
+  }
+  // Exhaustive check - TypeScript will error if new types are added without handling
+  const _exhaustive: never = type;
+  return _exhaustive;
+}
+
+/** Verify API key format (must start with apk_) */
+export function isValidApiKeyFormat(key: string): boolean {
+  return key.startsWith("apk_") && key.length > 4;
+}

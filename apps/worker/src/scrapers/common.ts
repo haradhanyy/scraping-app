@@ -1,20 +1,33 @@
 import { chromium, type Browser } from "playwright";
+import { ProxyConfig } from "@scraping-app/shared";
 
 let browserPromise: Promise<Browser> | null = null;
 
-/** Shared headless Chromium instance (reused across activities). */
-export async function getBrowser(): Promise<Browser> {
+/** Launch browser with optional proxy */
+export async function getBrowser(proxy?: ProxyConfig | null): Promise<Browser> {
   if (!browserPromise) {
+    const args = [
+      "--no-sandbox",
+      "--disable-setuid-sandbox",
+      "--disable-blink-features=AutomationControlled",
+    ];
+
+    if (proxy) {
+      const proxyUrl = `${proxy.protocol}://${proxy.host}:${proxy.port}`;
+      args.push(`--proxy-server=${proxyUrl}`);
+    }
+
     browserPromise = chromium.launch({
       headless: process.env.SCRAPER_HEADLESS !== "false",
-      args: [
-        "--no-sandbox",
-        "--disable-setuid-sandbox",
-        "--disable-blink-features=AutomationControlled",
-      ],
+      args,
     });
   }
   return browserPromise;
+}
+
+/** Reset browser (e.g., after proxy rotation) */
+export function resetBrowser(): void {
+  browserPromise = null;
 }
 
 /** "1.2K" / "3.4M" / "5,678" -> number. Returns 0 on unparseable input. */
@@ -45,7 +58,19 @@ export interface RawPost {
   caption?: string | null;
   likes: number;
   commentsCount: number;
+  views?: number;
   mediaUrls: string[];
   postUrl?: string | null;
   postedAt?: string | null;
+  type?: "POST" | "REEL" | "THREAD";
+  hashtags?: string[];
+  mentions?: string[];
+}
+
+export function extractHashtags(text: string): string[] {
+  return [...text.matchAll(/#[A-Za-z0-9_]+/g)].map((m) => m[0].slice(1));
+}
+
+export function extractMentions(text: string): string[] {
+  return [...text.matchAll(/@[A-Za-z0-9._]+/g)].map((m) => m[0].slice(1));
 }

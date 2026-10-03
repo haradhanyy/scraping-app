@@ -5,6 +5,8 @@ import { jobsRoute } from "./routes/jobs.js";
 import { targetsRoute } from "./routes/targets.js";
 import { postsRoute } from "./routes/posts.js";
 import { scrapeRoute } from "./routes/scrape.js";
+import { scrapeInstagramRoute } from "./routes/scrape-instagram.js";
+import { scrapeThreadsRoute } from "./routes/scrape-threads.js";
 
 const app = new Hono();
 
@@ -24,6 +26,10 @@ app.get("/health", (c) => c.json({ ok: true, ts: new Date().toISOString() }));
 app.route("/api/v1/targets", targetsRoute);
 app.route("/api/v1/posts", postsRoute);
 app.route("/api/v1/scrape", scrapeRoute);
+
+// New scrape endpoints with API key auth
+app.route("/scrape/instagram", scrapeInstagramRoute);
+app.route("/scrape/threads", scrapeThreadsRoute);
 
 // Legacy routes (for backward compatibility with existing web dashboard)
 app.route("/api/jobs", jobsRoute);

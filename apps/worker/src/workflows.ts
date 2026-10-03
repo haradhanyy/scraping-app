@@ -90,3 +90,5 @@ export async function scrapeWorkflow({ jobId }: ScrapeWorkflowInput): Promise<vo
     throw err;
   }
 }
+
+export { scrapeEventWorkflow } from "./workflows/event-workflow.js";

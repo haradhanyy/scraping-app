@@ -44,11 +44,13 @@ export async function runScraperActivity({ jobId }: ScrapeInput): Promise<RawPos
   if (!targetUrl) throw new Error("No target URL available for job");
   Context.current().heartbeat({ jobId, stage: "scrape-start", targetUrl });
 
+  const options = { maxPosts: job.maxPosts, scrapeViews: false, scrapeComments: false, maxComments: 0 };
+
   try {
     const posts =
       job.platform === "instagram"
-        ? await scrapeInstagram(targetUrl, job.maxPosts)
-        : await scrapeThreads(targetUrl, job.maxPosts);
+        ? await scrapeInstagram(targetUrl, options)
+        : await scrapeThreads(targetUrl, options);
     Context.current().heartbeat({ jobId, stage: "scrape-done", count: posts.length });
     return posts;
   } catch (err) {

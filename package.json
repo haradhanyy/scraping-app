@@ -15,7 +15,8 @@
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "infra:up": "docker compose -f docker/docker-compose.yml up -d",
     "infra:down": "docker compose -f docker/docker-compose.yml down",
-    "reconcile:jobs": "bun run scripts/reconcile-jobs.ts"
+    "reconcile:jobs": "bun run scripts/reconcile-jobs.ts",
+    "reconcile:events": "bun run scripts/reconcile-events.ts"
   },
   "devDependencies": {
     "@temporalio/client": "^1.11.6",
