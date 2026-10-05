@@ -28,11 +28,6 @@ export const scrapeThreadsRoute = new Hono()
 
       const payload = {
         threadsPostUrl: input.url,
-        scrapeLikes: input.scrapeLikes,
-        scrapeCommentNumber: input.scrapeCommentNumber,
-        scrapeViews: input.scrapeViews,
-        scrapeComments: input.scrapeComments,
-        maxComments: input.maxComments,
       };
 
       await prisma.scrapeEvent.create({

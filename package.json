@@ -16,10 +16,20 @@
     "infra:up": "docker compose -f docker/docker-compose.yml up -d",
     "infra:down": "docker compose -f docker/docker-compose.yml down",
     "reconcile:jobs": "bun run scripts/reconcile-jobs.ts",
-    "reconcile:events": "bun run scripts/reconcile-events.ts"
+    "reconcile:events": "bun run scripts/reconcile-events.ts",
+    "test": "bunx playwright test",
+    "test:ui": "bunx playwright test --ui",
+    "test:headed": "bunx playwright test --headed",
+    "test:api": "bunx playwright test tests/e2e/api-keys.spec.ts",
+    "test:e2e": "bunx playwright test tests/e2e/ui.spec.ts"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@temporalio/client": "^1.11.6",
+    "@types/node": "^26.6.4",
     "typescript": "^5.6.3"
+  },
+  "dependencies": {
+    "commander": "^15.0.0"
   }
 }

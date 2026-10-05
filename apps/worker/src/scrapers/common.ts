@@ -1,25 +1,17 @@
 import { chromium, type Browser } from "playwright";
-import { ProxyConfig } from "@scraping-app/shared";
 
 let browserPromise: Promise<Browser> | null = null;
 
-/** Launch browser with optional proxy */
-export async function getBrowser(proxy?: ProxyConfig | null): Promise<Browser> {
+/** Shared headless Chromium instance (reused across activities). */
+export async function getBrowser(): Promise<Browser> {
   if (!browserPromise) {
-    const args = [
-      "--no-sandbox",
-      "--disable-setuid-sandbox",
-      "--disable-blink-features=AutomationControlled",
-    ];
-
-    if (proxy) {
-      const proxyUrl = `${proxy.protocol}://${proxy.host}:${proxy.port}`;
-      args.push(`--proxy-server=${proxyUrl}`);
-    }
-
     browserPromise = chromium.launch({
       headless: process.env.SCRAPER_HEADLESS !== "false",
-      args,
+      args: [
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-blink-features=AutomationControlled",
+      ],
     });
   }
   return browserPromise;

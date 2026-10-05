@@ -83,3 +83,30 @@ export function Badge({ status }: { status: string }) {
 export function Label({ children }: { children: React.ReactNode }) {
   return <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-zinc-500">{children}</label>;
 }
+
+export function Modal({
+  open,
+  onOpenChange,
+  children,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  children: React.ReactNode;
+}) {
+  if (!open) return null;
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onOpenChange(false);
+      }}
+    >
+      <div
+        className="relative w-full max-w-md rounded-xl bg-white p-6 shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}

@@ -1,8 +1,8 @@
 import { Context } from "@temporalio/activity";
 import { prisma } from "@scraping-app/db";
-import type { RawPost } from "./scrapers/common.js";
-import { scrapeInstagram, RateLimitedError } from "./scrapers/instagram.js";
-import { scrapeThreads } from "./scrapers/threads.js";
+import type { RawPost } from "../scrapers/common.js";
+import { scrapeInstagram, RateLimitedError } from "../scrapers/instagram.js";
+import { scrapeThreads } from "../scrapers/threads.js";
 
 export { RateLimitedError };
 
@@ -44,13 +44,11 @@ export async function runScraperActivity({ jobId }: ScrapeInput): Promise<RawPos
   if (!targetUrl) throw new Error("No target URL available for job");
   Context.current().heartbeat({ jobId, stage: "scrape-start", targetUrl });
 
-  const options = { maxPosts: job.maxPosts, scrapeViews: false, scrapeComments: false, maxComments: 0 };
-
   try {
     const posts =
       job.platform === "instagram"
-        ? await scrapeInstagram(targetUrl, options)
-        : await scrapeThreads(targetUrl, options);
+        ? await scrapeInstagram(targetUrl, job.maxPosts)
+        : await scrapeThreads(targetUrl, job.maxPosts);
     Context.current().heartbeat({ jobId, stage: "scrape-done", count: posts.length });
     return posts;
   } catch (err) {

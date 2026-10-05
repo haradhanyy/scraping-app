@@ -299,17 +299,13 @@ const INSTAGRAM_PROFILE_RE = /^https?:\/\/(www\.)?instagram\.com\/[A-Za-z0-9._]+
 const THREADS_POST_RE = /^https?:\/\/(www\.)?threads\.net\/@[A-Za-z0-9._]+\/post\/[A-Za-z0-9_-]+\/?/;
 const THREADS_PROFILE_RE = /^https?:\/\/(www\.)?threads\.net\/@[A-Za-z0-9._]+\/?$/;
 
+// Simplified input schemas - just type + URL
 export const ScrapeInstagramInputSchema = z.object({
   type: z.enum(["POST", "REEL", "PROFILE"]),
   url: z.string().url().refine(
     (v) => INSTAGRAM_POST_RE.test(v) || INSTAGRAM_PROFILE_RE.test(v),
     "Must be a valid Instagram post/reel/profile URL",
   ),
-  scrapeLikes: z.boolean().default(true),
-  scrapeCommentNumber: z.boolean().default(true),
-  scrapeViews: z.boolean().default(false),
-  scrapeComments: z.boolean().default(false),
-  maxComments: z.coerce.number().int().min(0).max(200).default(0),
 });
 export type ScrapeInstagramInput = z.infer<typeof ScrapeInstagramInputSchema>;
 
@@ -319,11 +315,6 @@ export const ScrapeThreadsInputSchema = z.object({
     (v) => THREADS_POST_RE.test(v) || THREADS_PROFILE_RE.test(v),
     "Must be a valid Threads post/profile URL",
   ),
-  scrapeLikes: z.boolean().default(true),
-  scrapeCommentNumber: z.boolean().default(true),
-  scrapeViews: z.boolean().default(false),
-  scrapeComments: z.boolean().default(false),
-  maxComments: z.coerce.number().int().min(0).max(200).default(0),
 });
 export type ScrapeThreadsInput = z.infer<typeof ScrapeThreadsInputSchema>;
 
@@ -364,25 +355,6 @@ export const WebhookPayloadSchema = z.object({
   completedAt: z.string(),
 });
 export type WebhookPayload = z.infer<typeof WebhookPayloadSchema>;
-
-// ---------- Proxy ----------
-
-export const ProxyConfigSchema = z.object({
-  id: z.string(),
-  host: z.string(),
-  port: z.number().int(),
-  username: z.string().nullable().optional(),
-  password: z.string().nullable().optional(),
-  protocol: z.enum(["http", "socks5"]),
-  ipWhitelist: z.array(z.string()).default([]),
-  country: z.string().nullable().optional(),
-  isMobile: z.boolean().default(false),
-  isActive: z.boolean().default(true),
-  lastChecked: z.string().nullable().optional(),
-  latencyMs: z.number().int().nullable().optional(),
-  successRate: z.number().nullable().optional(),
-});
-export type ProxyConfig = z.infer<typeof ProxyConfigSchema>;
 
 // ---------- Utility ----------
 

@@ -1,10 +1,9 @@
 import { Context } from "@temporalio/activity";
 import { prisma } from "@scraping-app/db";
+import type { RawPost } from "../scrapers/common.js";
 import { scrapeInstagram, RateLimitedError } from "../scrapers/instagram.js";
 import { scrapeThreads } from "../scrapers/threads.js";
-import { extractHashtags, extractMentions } from "../scrapers/common.js";
-import { generateEventId } from "@scraping-app/shared";
-import { createHash, randomBytes } from "crypto";
+import { createHash } from "crypto";
 
 export { RateLimitedError };
 
@@ -15,28 +14,10 @@ export interface EventInput {
 interface ScrapePayload {
   instagramPostUrl?: string;
   threadsPostUrl?: string;
-  scrapeLikes?: boolean;
-  scrapeCommentNumber?: boolean;
-  scrapeViews?: boolean;
-  scrapeComments?: boolean;
-  maxComments?: number;
 }
 
 interface ScrapeResult {
-  posts: Array<{
-    author: string;
-    authorAvatar?: string | null;
-    caption?: string | null;
-    likes: number;
-    commentsCount: number;
-    views?: number;
-    mediaUrls: string[];
-    postUrl?: string | null;
-    postedAt?: string | null;
-    type?: "POST" | "REEL" | "THREAD";
-    hashtags?: string[];
-    mentions?: string[];
-  }>;
+  posts: RawPost[];
   targetHandle?: string;
   targetPlatform?: "instagram" | "threads";
   followerCount?: number;
@@ -87,17 +68,11 @@ export async function runScraperEventActivity({ eventId }: EventInput): Promise<
 
   try {
     let posts;
-    const options = {
-      maxPosts: 1, // single URL scrape
-      scrapeViews: payload.scrapeViews,
-      scrapeComments: payload.scrapeComments,
-      maxComments: payload.maxComments,
-    };
 
     if (event.type.startsWith("SCRAPE_INSTAGRAM")) {
-      posts = await scrapeInstagram(targetUrl, options);
+      posts = await scrapeInstagram(targetUrl, 1);
     } else {
-      posts = await scrapeThreads(targetUrl, options);
+      posts = await scrapeThreads(targetUrl, 1);
     }
 
     Context.current().heartbeat({ eventId, stage: "scrape-done", count: posts.length });
@@ -128,7 +103,7 @@ export async function saveEventResultActivity({
   result,
 }: EventInput & { result: ScrapeResult }) {
   const event = await prisma.scrapeEvent.findUniqueOrThrow({ where: { eventId } });
-  const payload = event.payload as ScrapePayload;
+  const payload = event.payload as { instagramPostUrl?: string; threadsPostUrl?: string };
 
   if (result.posts.length === 0) {
     return { saved: 0 };
@@ -236,7 +211,7 @@ export async function fireWebhookActivity({
   webhookUrl,
   webhookSecret,
   payload,
-}: FireWebhookInput) {
+}: { webhookUrl: string; webhookSecret?: string; payload: Record<string, unknown> }) {
   try {
     const body = JSON.stringify(payload);
     const headers: Record<string, string> = {

@@ -30,11 +30,6 @@ export const scrapeInstagramRoute = new Hono()
       // Build payload for workflow
       const payload = {
         instagramPostUrl: input.url,
-        scrapeLikes: input.scrapeLikes,
-        scrapeCommentNumber: input.scrapeCommentNumber,
-        scrapeViews: input.scrapeViews,
-        scrapeComments: input.scrapeComments,
-        maxComments: input.maxComments,
       };
 
       // Create ScrapeEvent record

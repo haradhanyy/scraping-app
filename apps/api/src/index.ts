@@ -7,6 +7,7 @@ import { postsRoute } from "./routes/posts.js";
 import { scrapeRoute } from "./routes/scrape.js";
 import { scrapeInstagramRoute } from "./routes/scrape-instagram.js";
 import { scrapeThreadsRoute } from "./routes/scrape-threads.js";
+import { apiKeysRoute } from "./routes/api-keys.js";
 
 const app = new Hono();
 
@@ -26,6 +27,7 @@ app.get("/health", (c) => c.json({ ok: true, ts: new Date().toISOString() }));
 app.route("/api/v1/targets", targetsRoute);
 app.route("/api/v1/posts", postsRoute);
 app.route("/api/v1/scrape", scrapeRoute);
+app.route("/api/v1/api-keys", apiKeysRoute);
 
 // New scrape endpoints with API key auth
 app.route("/scrape/instagram", scrapeInstagramRoute);

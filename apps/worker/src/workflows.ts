@@ -4,7 +4,7 @@ import {
   log,
   sleep,
 } from "@temporalio/workflow";
-import type * as activities from "./activities.js";
+import type * as activities from "./activities/activities.js";
 
 const {
   loadJobActivity,

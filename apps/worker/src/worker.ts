@@ -1,5 +1,5 @@
 import { NativeConnection, Worker } from "@temporalio/worker";
-import * as activities from "./activities.js";
+import * as activities from "./activities/activities.js";
 import * as eventActivities from "./activities/event-activities.js";
 
 async function main() {
@@ -19,7 +19,7 @@ async function main() {
       ...activities,
       ...eventActivities,
     },
-    maxConcurrentActivityTaskExecutions: 4,
+    maxConcurrentActivityTaskExecutions: 4, // bound concurrent Chromium pages
   });
 
   console.log("[worker] running — press Ctrl+C to stop");

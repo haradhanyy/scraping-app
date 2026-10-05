@@ -1,0 +1,110 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+env:
+  DATABASE_URL: postgresql://postgres:postgres@localhost:5432/scraper_test
+  TEMPORAL_ADDRESS: localhost:7233
+  TEMPORAL_NAMESPACE: default
+  TEST_API_KEY: apk_test123456789012345678901234
+
+jobs:
+  typecheck:
+    name: Typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+      - run: bun install --frozen-lockfile
+      - run: bun run typecheck
+
+  test:
+    name: E2E Tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: scraper_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      temporal:
+        image: temporalio/auto-setup:1.25
+        env:
+          DB: postgres12
+          DB_PORT: 5432
+          POSTGRES_USER: postgres
+          POSTGRES_PWD: postgres
+          POSTGRES_SEEDS: postgres
+        ports:
+          - 7233:7233
+        options: >-
+          --health-cmd "temporal operator cluster health"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+      - name: Generate Prisma client
+        run: bun run db:generate
+        env:
+          DATABASE_URL: ${{ env.DATABASE_URL }}
+      - name: Push database schema
+        run: bun run db:push
+        env:
+          DATABASE_URL: ${{ env.DATABASE_URL }}
+      - name: Install Playwright browsers
+        run: bunx playwright install --with-deps chromium
+      - name: Build API
+        run: bun run --filter api build
+      - name: Build Web
+        run: bun run --filter web build
+      - name: Run API tests
+        run: bun run test:api
+        env:
+          TEST_API_KEY: ${{ env.TEST_API_KEY }}
+      - name: Run UI tests
+        run: bun run test:e2e
+        env:
+          TEST_API_KEY: ${{ env.TEST_API_KEY }}
+
+  build:
+    name: Build All
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+      - run: bun install --frozen-lockfile
+      - run: bun run build
+
+  docker:
+    name: Docker Build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Docker images
+        run: |
+          docker build -t scraping-app/api -f apps/api/Dockerfile .
+          docker build -t scraping-app/web -f apps/web/Dockerfile .
+          docker build -t scraping-app/worker -f apps/worker/Dockerfile .

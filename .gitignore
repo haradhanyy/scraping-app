@@ -2,3 +2,7 @@ node_modules
 .env
 dist
 .bun
+
+# Test artifacts
+playwright-report/
+test-results/
